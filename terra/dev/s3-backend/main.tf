@@ -9,24 +9,13 @@
 # ----------------------------------------------------------------------------------------------------------------------
 terraform {
   required_version = ">= 0.12"
-
-  # This backend configuration instructs Terraform to store its state in an S3 bucket.
-  backend "s3" {
-    bucket         = aws_s3_bucket.terraform_state.bucket  # Name of the S3 bucket where the state will be stored.
-    key            = var.region # Path within the bucket where the state will be read/written.
-    region         = var.region # AWS region of the S3 bucket.
-    dynamodb_table = aws_dynamodb_table.terraform_lock.name # DynamoDB table used for state locking.
-    encrypt        = true  # Ensures the state is encrypted at rest in S3.
-  }
 }
 
 # ------------------------------------------------------------------------------
 # CONFIGURE OUR AWS CONNECTION
 # ------------------------------------------------------------------------------
 provider "aws" {
-  region = var.region
-
-  allowed_account_ids = var.allowed_account_id
+  region = var.region_s3_backend
 }
 
 # ------------------------------------------------------------------------------
@@ -35,18 +24,13 @@ provider "aws" {
 
 resource "aws_s3_bucket" "terraform_state" {
   # With account id, this S3 bucket names can be *globally* unique.
-  bucket = "${var.allowed_account_id}-terraform-states"
-}
-
-resource "aws_s3_bucket_acl" "terraform_state" {
-  bucket = aws_s3_bucket.terraform_state.id
-  acl    = "private"
+  bucket = "${var.terraform_account_id}-terraform-states"
 }
 
 # Enable versioning so we can see the full revision history of our
 # state files
 resource "aws_s3_bucket_versioning" "versioning_terraform_state" {
-  bucket = aws_s3_bucket.terraform_state
+  bucket = aws_s3_bucket.terraform_state.id
   versioning_configuration {
     status = "Enabled"
   }
